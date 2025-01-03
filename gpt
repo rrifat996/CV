@@ -1,0 +1,99 @@
+function visibility_graph()
+
+    % Create a new figure window
+    figure;
+    hold on;
+
+    % Define the UAV position (starting point)
+    UAV = [1, 1]; % UAV at (1, 1)
+
+    % Define waypoints as a matrix of (x, y) coordinates
+    waypoints = [4, 5; 7, 8; 9, 3]; % Waypoints
+
+    % Define obstacles (rectangles)
+    % Rectangle format: [x, y, width, height]
+    obstacles = [
+        2, 3, 4, 5;   % Obstacle 1
+        6, 7, 3, 2;   % Obstacle 2
+    ];
+
+    % Plot obstacles (rectangles)
+    for i = 1:size(obstacles, 1)
+        rectangle('Position', obstacles(i,:), 'EdgeColor', 'k', 'LineWidth', 2);
+    end
+
+    % Plot UAV position
+    plot(UAV(1), UAV(2), 'go', 'MarkerFaceColor', 'g');
+    text(UAV(1), UAV(2), ' UAV', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+
+    % Plot waypoints
+    for i = 1:size(waypoints, 1)
+        plot(waypoints(i, 1), waypoints(i, 2), 'bo', 'MarkerFaceColor', 'b');
+        text(waypoints(i, 1), waypoints(i, 2), [' Waypoint ', num2str(i)], ...
+            'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
+    end
+
+    % Check visibility from UAV to each waypoint
+    for i = 1:size(waypoints, 1)
+        % Check line-of-sight from UAV to waypoint
+        if ~line_intersects_rectangle(UAV, waypoints(i, :), obstacles)
+            % If no intersection, plot a line (edge) from UAV to waypoint
+            plot([UAV(1), waypoints(i, 1)], [UAV(2), waypoints(i, 2)], 'k--');
+        end
+    end
+
+    % Set axis limits and labels
+    axis([0 12 0 12]);
+    grid on;
+    xlabel('X-axis');
+    ylabel('Y-axis');
+    title('Visibility Graph with Obstacles');
+    
+    % Display the figure
+    hold off;
+end
+
+% Function to check if a line between two points intersects any rectangle
+function intersect = line_intersects_rectangle(p1, p2, obstacles)
+    intersect = false; % Default: no intersection
+    for i = 1:size(obstacles, 1)
+        % Get rectangle parameters
+        rect = obstacles(i, :);
+        % Define the rectangle corners
+        rect_x = [rect(1), rect(1) + rect(3), rect(1) + rect(3), rect(1)];
+        rect_y = [rect(2), rect(2), rect(2) + rect(4), rect(2) + rect(4)];
+        
+        % Check for intersection between line (p1, p2) and the rectangle
+        for j = 1:4
+            % Check if the line intersects with each side of the rectangle
+            rect_line_start = [rect_x(j), rect_y(j)];
+            rect_line_end = [rect_x(mod(j, 4) + 1), rect_y(mod(j, 4) + 1)];
+            if lines_intersect(p1, p2, rect_line_start, rect_line_end)
+                intersect = true; % Intersection found
+                return;
+            end
+        end
+    end
+end
+
+% Function to check if two line segments intersect
+function intersect = lines_intersect(p1, p2, p3, p4)
+    % Line segment 1: p1 to p2
+    % Line segment 2: p3 to p4
+    intersect = false;
+
+    % Calculate the direction of the lines
+    denom = (p4(2) - p3(2)) * (p2(1) - p1(1)) - (p4(1) - p3(1)) * (p2(2) - p1(2));
+    if denom == 0
+        return; % Lines are parallel or collinear
+    end
+    
+    % Calculate the intersection point using parametric equations
+    ua = ((p4(1) - p3(1)) * (p1(2) - p3(2)) - (p4(2) - p3(2)) * (p1(1) - p3(1))) / denom;
+    ub = ((p2(1) - p1(1)) * (p1(2) - p3(2)) - (p2(2) - p1(2)) * (p1(1) - p3(1))) / denom;
+
+    % Check if the intersection point is within the bounds of both segments
+    if ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1
+        intersect = true;
+    end
+end
